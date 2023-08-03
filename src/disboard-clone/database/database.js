@@ -10,6 +10,9 @@ con.connect(function(err) {
   if (err) throw err;  
   console.log("Connected!");  
 });
+eventTypes = [
+  "status_update"
+]
 
 function userPresenceChanged(status, guildId, userId){
       con.query("UPDATE servers SET online_users = online_users + IF(?, 1, -1) WHERE server_id = ?", [((status == "online") ? true : false), guildId], function (err, result, fields) {  
@@ -17,6 +20,8 @@ function userPresenceChanged(status, guildId, userId){
       });
       con.query("UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?", [status, guildId, userId], function (err, result, fields) {
           if (err) throw err;
+      });
+      con.query("INSERT INTO events (timestamp, event_type, event_data) VALUES (?, ?, ?)", [Date.now(), eventTypes[0], JSON.stringify({guildId: guildId, userId: userId, status: status})], function (err, result, fields) {
       });
 }
 
