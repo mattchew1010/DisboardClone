@@ -8,7 +8,26 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 
 
 client.once(Events.ClientReady, () => {
-	
+	client.guilds.fetch()
+   .then(guilds => {
+      guilds.each(oauthguild => {
+         oauthguild.fetch()
+         .then(guild => {
+            //update server count
+            guild.members.fetch({withPresences: true})
+            .then(members => {
+               let onlineCount = 0
+               members.each(member => {
+                  database.updateUserStatus(guild.id, member.id, member.presence ? member.presence.status : "offline")
+                  if (member.presence != null && member.presence.status == "online") onlineCount++;
+               })
+               database.updateServerCount(guild.id, guild.memberCount, onlineCount)
+            })
+            //todo: case where new users join while bot is offline
+         })
+      })
+   })
+   
 });
 client.on(Events.GuildCreate, (guild) => {
    console.log(`Joined ${guild.name}`)
@@ -25,6 +44,7 @@ client.on(Events.GuildCreate, (guild) => {
 
 client.on(Events.PresenceUpdate, (oldPresence, newPresence) => {
    if (newPresence == null) return; //nothing we can do here
+   console.log(`+ ${newPresence.user.username} is now ${newPresence.status}`)
    if (oldPresence == null){
       database.getUser(newPresence.user.id, newPresence.guild.id, (data) => {
          if (data.length == 0){
@@ -40,6 +60,9 @@ client.on(Events.PresenceUpdate, (oldPresence, newPresence) => {
    }
    
 });
+//todo: handle user join/leave
+//todo: handle bot leave
+//todo: events table
 
 
 // Login to Discord with your client's token
