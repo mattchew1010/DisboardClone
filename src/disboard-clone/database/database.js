@@ -8,7 +8,7 @@ var con = mysql.createConnection({
 });  
 con.connect(function(err) {  
   if (err) throw err;  
-  console.log("Connected!");  
+  console.log("## Database Connected ##");  
 });
 eventTypes = [
   "status_update"
@@ -61,4 +61,10 @@ function updateUserStatus(guildId, userId, status){
    });
 }
 
-module.exports = {userOnlineStatusChanged, createServer, createUser, getUser, updateServerCount, updateUserStatus, userPresenceChanged};
+function getAllServerIds(cb){
+    con.query("SELECT server_id FROM servers", function (err, result, fields) {
+        if (err) throw err;
+        cb(result)
+    });
+}
+module.exports = {userOnlineStatusChanged, createServer, createUser, getUser, updateServerCount, updateUserStatus, userPresenceChanged, getAllServerIds};
