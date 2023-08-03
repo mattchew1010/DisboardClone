@@ -5,7 +5,11 @@ const { data } = require('autoprefixer');
 const token = process.env.discord_bot_token //temp move to .env
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildPresences, GatewayIntentBits.GuildMembers]});
-
+const onlineStatus = [
+   "online",
+   "idle",
+   "dnd"
+]
 
 client.once(Events.ClientReady, () => {
 	client.guilds.fetch()
@@ -19,11 +23,13 @@ client.once(Events.ClientReady, () => {
                let onlineCount = 0
                members.each(member => {
                   database.updateUserStatus(guild.id, member.id, member.presence ? member.presence.status : "offline")
-                  if (member.presence != null && member.presence.status == "online") onlineCount++;
+                  if (member.presence != null && member.presence.status != "offline") onlineCount++;
                })
                database.updateServerCount(guild.id, guild.memberCount, onlineCount)
             })
             //todo: case where new users join while bot is offline
+            //todo: case where users leave while bot is offline
+            //todo: case where bot joins server while offline
          })
       })
    })
@@ -50,13 +56,23 @@ client.on(Events.PresenceUpdate, (oldPresence, newPresence) => {
          if (data.length == 0){
             database.createUser(newPresence.guild.id, newPresence.user.id, newPresence.status)
          }else{
-            database.userPresenceChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)
+            if ((onlineStatus.includes(data[0].status) && newPresence.status == "offline") || (data[0].status == "offline" && onlineStatus.includes(newPresence.status))){
+               //^^ if the user was online and is now offline, or was offline and is now online
+               database.userOnlineStatusChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)
+            }else{
+               database.userPresenceChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)
+            }
          }
       });
       return; //end of gaurd clause so return
    }
    if (oldPresence.status != newPresence.status) {
-      database.userPresenceChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)      
+      if ((onlineStatus.includes(oldPresence.status) && newPresence.status == "offline") || (oldPresence.status == "offline" && onlineStatus.includes(newPresence.status))){
+         //^^ if the user was online and is now offline, or was offline and is now online
+         database.userOnlineStatusChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)
+      }else{
+         database.userPresenceChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)
+      } 
    }
    
 });

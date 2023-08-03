@@ -14,8 +14,8 @@ eventTypes = [
   "status_update"
 ]
 
-function userPresenceChanged(status, guildId, userId){
-      con.query("UPDATE servers SET online_users = online_users + IF(?, 1, -1) WHERE server_id = ?", [((status == "online") ? true : false), guildId], function (err, result, fields) {  
+function userOnlineStatusChanged(status, guildId, userId){
+      con.query("UPDATE servers SET online_users = GREATEST(0, online_users + IF(?, 1, -1)) WHERE server_id = ?", [((status !== "offline") ? true : false), guildId], function (err, result, fields) {  
          if (err) throw err;  
       });
       con.query("UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?", [status, guildId, userId], function (err, result, fields) {
@@ -23,6 +23,16 @@ function userPresenceChanged(status, guildId, userId){
       });
       con.query("INSERT INTO events (timestamp, event_type, event_data) VALUES (?, ?, ?)", [Date.now(), eventTypes[0], JSON.stringify({guildId: guildId, userId: userId, status: status})], function (err, result, fields) {
       });
+}
+
+function userPresenceChanged(status, guildId, userId){
+  //online status did NOT change, but presence did
+  con.query("UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?", [status, guildId, userId], function (err, result, fields) {
+      if (err) throw err;
+  });
+  con.query("INSERT INTO events (timestamp, event_type, event_data) VALUES (?, ?, ?)", [Date.now(), eventTypes[0], JSON.stringify({guildId: guildId, userId: userId, status: status})], function (err, result, fields) {
+  
+  });
 }
 
 function getUser(userId, guildId, cb){
@@ -51,4 +61,4 @@ function updateUserStatus(guildId, userId, status){
    });
 }
 
-module.exports = {userPresenceChanged, createServer, createUser, getUser, updateServerCount, updateUserStatus};
+module.exports = {userOnlineStatusChanged, createServer, createUser, getUser, updateServerCount, updateUserStatus, userPresenceChanged};
