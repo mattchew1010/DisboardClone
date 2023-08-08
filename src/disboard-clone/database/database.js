@@ -21,7 +21,7 @@ function userOnlineStatusChanged(status, guildId, userId){
       con.query("UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?", [status, guildId, userId], function (err, result, fields) {
           if (err) throw err;
       });
-      con.query("INSERT INTO events (timestamp, event_type, event_data) VALUES (?, ?, ?)", [Date.now(), eventTypes[0], JSON.stringify({guildId: guildId, userId: userId, status: status})], function (err, result, fields) {
+      con.query("INSERT INTO events (timestamp, event_type, event_data, guild_id, user_id) VALUES (?, ?, ?, ? ,?)", [Date.now(), eventTypes[0], JSON.stringify({status: status}), guildId, userId], function (err, result, fields) {
       });
 }
 
@@ -30,8 +30,7 @@ function userPresenceChanged(status, guildId, userId){
   con.query("UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?", [status, guildId, userId], function (err, result, fields) {
       if (err) throw err;
   });
-  con.query("INSERT INTO events (timestamp, event_type, event_data) VALUES (?, ?, ?)", [Date.now(), eventTypes[0], JSON.stringify({guildId: guildId, userId: userId, status: status})], function (err, result, fields) {
-  
+  con.query("INSERT INTO events (timestamp, event_type, event_data, guild_id, user_id) VALUES (?, ?, ?, ? ,?)", [Date.now(), eventTypes[0], JSON.stringify({status: status}), guildId, userId], function (err, result, fields) {
   });
 }
 
