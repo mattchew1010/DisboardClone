@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Events} = require('discord.js');
-const {Database, queryStatements} = require('../database/database.js');
+const {Database, queryStatements, onlineStatus} = require('../database/database.js');
 const { data } = require('autoprefixer');
 const token = process.env.discord_bot_token //temp move to .env
 const db = new Database
@@ -73,29 +73,38 @@ client.on(Events.PresenceUpdate, (oldPresence, newPresence) => {
    if (newPresence == null) return; //nothing we can do here
    console.log(`+ ${newPresence.user.username} is now ${newPresence.status} in '${newPresence.guild.name}' (${newPresence.guild.id})`)
    if (oldPresence == null){
-      database.getUser(newPresence.user.id, newPresence.guild.id, (data) => {
-         if (data.length == 0){
-            database.createUser(newPresence.guild.id, newPresence.user.id, newPresence.status)
+      db.query(queryStatements.getUser, [newPresence.guild.id, newPresence.user.id]).then(userArray =>{
+         if (userArray.length == 0){
+            //create new user
+            db.query(queryStatements.createUser, [newPresence.guild.id, newPresence.user.id, newPresence.status])
+            .catch(console.warn)
+         }else if (userArray > 1){
+            //??? unlikely to happen but how do we deal with this
          }else{
-            if ((onlineStatus.includes(data[0].status) && newPresence.status == "offline") || (data[0].status == "offline" && onlineStatus.includes(newPresence.status))){
-               //^^ if the user was online and is now offline, or was offline and is now online
-               database.userOnlineStatusChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)
-            }else{
-               database.userPresenceChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)
+            let user = userArray[0]
+            if ((onlineStatus.includes(user.status) && newPresence.status == "offline") || (user.status == "offline" && onlineStatus.includes(newPresence.status))){
+               db.query(queryStatements.userOnlineStatusServerUpdate, [newPresence.status == "offline" ? false : true])
+               .then(db.query(queryStatements.userOnlineStatusUpdate, [newPresence.status, newPresence.guild.id, newPresence.user.id]))
+               .then(db.query(queryStatements.newEvent, [Date.now(), "status_update", JSON.stringify({status: newPresence.status}), newPresence.guild.id, newPresence.user.id]))
+               .catch(console.warn)
             }
          }
-      });
-      return; //end of gaurd clause so return
+      })
+      return; //end of gaurd clause for null old pres
    }
    if (oldPresence.status != newPresence.status) {
       if ((onlineStatus.includes(oldPresence.status) && newPresence.status == "offline") || (oldPresence.status == "offline" && onlineStatus.includes(newPresence.status))){
          //^^ if the user was online and is now offline, or was offline and is now online
-         database.userOnlineStatusChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)
+         db.query(queryStatements.userOnlineStatusServerUpdate, [newPresence.status == "offline" ? false : true])
+               .then(db.query(queryStatements.userOnlineStatusUpdate, [newPresence.status, newPresence.guild.id, newPresence.user.id]))
+               .then(db.query(queryStatements.newEvent, [Date.now(), "status_update", JSON.stringify({status: newPresence.status}), newPresence.guild.id, newPresence.user.id]))
+               .catch(console.warn)
       }else{
-         database.userPresenceChanged(newPresence.status, newPresence.guild.id, newPresence.user.id)
+         db.query(queryStatements.userOnlineStatusUpdate, [newPresence.status, newPresence.guild.id, newPresence.user.id])
+         .then(db.query(queryStatements.newEvent, [Date.now(), "status_update", JSON.stringify({status: newPresence.status}), newPresence.guild.id, newPresence.user.id]))
+         .catch(console.warn)
       } 
    }
-   
 });
 //todo: handle user join/leave
 //todo: handle bot leave
