@@ -36,7 +36,7 @@ const queryStatements = {
   userOnlineStatusUpdate: "UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?",
 
   /**
-   * Inserts a new event into the events table
+   * Inserts a new event into the events table [timestamp, event_type, event_data, guild_id, user_id]
    * @param {string} timestamp - The timestamp of the event
    * @param {string} event_type - The type of the event
    * @param {string} event_data - The data associated with the event
