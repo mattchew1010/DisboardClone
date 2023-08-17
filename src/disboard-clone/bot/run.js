@@ -57,15 +57,17 @@ client.once(Events.ClientReady, () => {
 client.on(Events.GuildCreate, (guild) => {
    console.log(`Joined ${guild.name}`)
    //guild.members.cache.each(member => console.log(member.presence))
-   database.createServer(guild.id, guild.memberCount, guild.members.cache.filter(member => (member.presence != null && member.presence.status != "offline")).size)
+   db.query(queryStatements.createServer, [guild.id, guild.memberCount, guild.members.cache.filter(member => (member.presence != null && member.presence.status != "offline")).size])
+   .catch(console.warn)
    guild.members.fetch({withPresences: true})
       .then(members => {
          members.each(member => {
-            database.createUser(guild.id, member.id, member.presence ? member.presence.status : "offline")
+            db.query(queryStatements.createUser, [guild.id, member.id, member.presence ? member.presence.status : "offline"])
+            .catch(console.warn)
          })
       })
       .catch(() => console.warn("Failed to fetch members"));
-});
+})
 
 client.on(Events.PresenceUpdate, (oldPresence, newPresence) => {
    if (newPresence == null) return; //nothing we can do here
