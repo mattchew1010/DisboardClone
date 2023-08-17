@@ -1,19 +1,15 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Events} = require('discord.js');
-const database = require('../database/database.js');
+const {Database, queryStatements} = require('../database/database.js');
 const { data } = require('autoprefixer');
 const token = process.env.discord_bot_token //temp move to .env
-
+const db = new Database
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildPresences, GatewayIntentBits.GuildMembers]});
-const onlineStatus = [
-   "online",
-   "idle",
-   "dnd"
-]
+
 
 client.once(Events.ClientReady, () => {
-   serverIds = database.getAllServerIds((serverIds) => {
-      client.guilds.fetch()
+   db.query(queryStatements.listServerIds).then((serverIds) => {
+     client.guilds.fetch()
       .then(guilds => {
          guilds.each(oauthguild => {
             oauthguild.fetch()
@@ -21,7 +17,9 @@ client.once(Events.ClientReady, () => {
                //new guild joined while bot was offline
                if (!serverIds.find(({server_id}) => server_id === guild.id)){
                   console.log(`+ Adding '${guild.name}' to database`)
-                  database.createServer(guild.id, guild.memberCount, 0) 
+                  db.query(queryStatements.createServer, [guild.id, guild.memberCount, 0])
+                  .then(() => console.log("Success"))
+                  .catch(() => console.warn("Failed adding guild to database"))
                   //set online to 0 since it will be updated later. possibly change this to remove extra queries
                }
 
@@ -29,20 +27,33 @@ client.once(Events.ClientReady, () => {
                guild.members.fetch({withPresences: true})
                .then(members => {
                   let onlineCount = 0
-                  members.each(member => {
-                     database.updateUserStatus(guild.id, member.id, member.presence ? member.presence.status : "offline")
-                     if (member.presence != null && member.presence.status != "offline") onlineCount++;
-                  })
-                  database.updateServerCount(guild.id, guild.memberCount, onlineCount)
+                  db.query(queryStatements.listServerUsers, [guild.id]).then((users) => {//users = [{user_id: 123, status: "online"}]
+                     members.each(member => {
+                        if (!users.find(({user_id}) => user_id === member.id)){ //can not find an entry for a guild member in the db
+                           console.log(`+ adding user ${member.displayName} (${member.id}) in guild ${guild.name} `)
+                           db.query(queryStatements.createUser, [guild.id, member.id, (member.presence != null) ? member.presence.status : "offline"]) //if no presence then consider them offline
+                           .catch(console.warn)
+                        }
+                        db.query(queryStatements.userOnlineStatusUpdate, [(member.presence != null) ? member.presence.status : "offline", guild.id, member.id])
+                        .catch(console.warn)
+                        if (member.presence != null && member.presence.status != "offline") onlineCount++;
+                     })
+                     //after members.each set the online count in db
+                     db.query(queryStatements.updateServerCount, [guild.memberCount, onlineCount, guild.id])
+                     .catch(console.warn)
+                  })                  
                })
                //todo: case where new users join while bot is offline
                //todo: case where users leave while bot is offline
                //todo: case where bot joins server while offline
             })
          })
-      })
+      }) 
    })
-});
+   .catch((err) => console.warn("Error getting server Ids: \n" + err))
+   .finally(console.log("## Finished Setup ##"))
+})
+
 client.on(Events.GuildCreate, (guild) => {
    console.log(`Joined ${guild.name}`)
    //guild.members.cache.each(member => console.log(member.presence))
@@ -90,4 +101,4 @@ client.on(Events.PresenceUpdate, (oldPresence, newPresence) => {
 
 
 // Login to Discord with your client's token
-client.login(token);
+client.login(token)
