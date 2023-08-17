@@ -24,7 +24,6 @@ const queryStatements = {
    * Updates the online status of a user in a server
    * @param {boolean} online_status - The online status of the user
    * @param {string} server_id - The ID of the server
-   * @returns {string} - The SQL query to update the online status of a user in a server
    */
   userOnlineStatusServerUpdate: "UPDATE servers SET online_users = GREATEST(0, online_users + IF(?, 1, -1)) WHERE server_id = ?",
 
@@ -33,7 +32,6 @@ const queryStatements = {
    * @param {string} status - The status of the user
    * @param {string} server_id - The ID of the server
    * @param {string} user_id - The ID of the user
-   * @returns {string} - The SQL query to update the online status of a user
    */
   userOnlineStatusUpdate: "UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?",
 
@@ -44,7 +42,6 @@ const queryStatements = {
    * @param {string} event_data - The data associated with the event
    * @param {string} guild_id - The ID of the guild associated with the event
    * @param {string} user_id - The ID of the user associated with the event
-   * @returns {string} - The SQL query to insert a new event into the events table
    */
   newEvent: "INSERT INTO events (timestamp, event_type, event_data, guild_id, user_id) VALUES (?, ?, ?, ? ,?)",
 
@@ -52,7 +49,7 @@ const queryStatements = {
    * Retrieves a user from the users table
    * @param {string} server_id - The ID of the server
    * @param {string} user_id - The ID of the user
-   * @returns {string} - The SQL query to retrieve a user from the users table
+   * @returns {string} - The user entry
    */
   getUser: "SELECT * FROM users WHERE server_id = ? AND user_id = ?",
 
@@ -61,7 +58,6 @@ const queryStatements = {
    * @param {string} server_id - The ID of the server
    * @param {number} total_users - The total number of users in the server
    * @param {number} online_users - The number of online users in the server
-   * @returns {string} - The SQL query to insert a new server into the servers table
    */
   createServer: "INSERT INTO servers (server_id, total_users, online_users) VALUES (?, ?, ?)",
 
@@ -70,7 +66,6 @@ const queryStatements = {
    * @param {number} total_users - The total number of users in the server
    * @param {number} online_users - The number of online users in the server
    * @param {string} server_id - The ID of the server
-   * @returns {string} - The SQL query to update the total and online user count of a server
    */
   updateServerCount: "UPDATE servers SET total_users = ?, online_users = ? WHERE server_id = ?",
 
@@ -79,7 +74,6 @@ const queryStatements = {
    * @param {string} server_id - The ID of the server
    * @param {string} user_id - The ID of the user
    * @param {string} status - The status of the user
-   * @returns {string} - The SQL query to insert a new user into the users table
    */
   createUser: "INSERT INTO users (server_id, user_id, status) VALUES (?, ?, ?)",
 
