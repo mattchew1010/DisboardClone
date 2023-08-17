@@ -10,60 +10,108 @@ con.connect(function(err) {
   if (err) throw err;  
   console.log("## Database Connected ##");  
 });
-eventTypes = [
+const eventTypes = [
   "status_update"
 ]
+const onlineStatus = [
+   "online",
+   "idle",
+   "dnd"
+]
 
-function userOnlineStatusChanged(status, guildId, userId){
-      con.query("UPDATE servers SET online_users = GREATEST(0, online_users + IF(?, 1, -1)) WHERE server_id = ?", [((status !== "offline") ? true : false), guildId], function (err, result, fields) {  
-         if (err) throw err;  
-      });
-      con.query("UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?", [status, guildId, userId], function (err, result, fields) {
-          if (err) throw err;
-      });
-      con.query("INSERT INTO events (timestamp, event_type, event_data, guild_id, user_id) VALUES (?, ?, ?, ? ,?)", [Date.now(), eventTypes[0], JSON.stringify({status: status}), guildId, userId], function (err, result, fields) {
-      });
+const queryStatements = {
+  /**
+   * Updates the online status of a user in a server
+   * @param {boolean} online_status - The online status of the user
+   * @param {string} server_id - The ID of the server
+   * @returns {string} - The SQL query to update the online status of a user in a server
+   */
+  userOnlineStatusServerUpdate: "UPDATE servers SET online_users = GREATEST(0, online_users + IF(?, 1, -1)) WHERE server_id = ?",
+
+  /**
+   * Updates the online status of a user
+   * @param {string} status - The status of the user
+   * @param {string} server_id - The ID of the server
+   * @param {string} user_id - The ID of the user
+   * @returns {string} - The SQL query to update the online status of a user
+   */
+  userOnlineStatusUpdate: "UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?",
+
+  /**
+   * Inserts a new event into the events table
+   * @param {string} timestamp - The timestamp of the event
+   * @param {string} event_type - The type of the event
+   * @param {string} event_data - The data associated with the event
+   * @param {string} guild_id - The ID of the guild associated with the event
+   * @param {string} user_id - The ID of the user associated with the event
+   * @returns {string} - The SQL query to insert a new event into the events table
+   */
+  newEvent: "INSERT INTO events (timestamp, event_type, event_data, guild_id, user_id) VALUES (?, ?, ?, ? ,?)",
+
+  /**
+   * Retrieves a user from the users table
+   * @param {string} server_id - The ID of the server
+   * @param {string} user_id - The ID of the user
+   * @returns {string} - The SQL query to retrieve a user from the users table
+   */
+  getUser: "SELECT * FROM users WHERE server_id = ? AND user_id = ?",
+
+  /**
+   * Inserts a new server into the servers table
+   * @param {string} server_id - The ID of the server
+   * @param {number} total_users - The total number of users in the server
+   * @param {number} online_users - The number of online users in the server
+   * @returns {string} - The SQL query to insert a new server into the servers table
+   */
+  createServer: "INSERT INTO servers (server_id, total_users, online_users) VALUES (?, ?, ?)",
+
+  /**
+   * Updates the total and online user count of a server
+   * @param {number} total_users - The total number of users in the server
+   * @param {number} online_users - The number of online users in the server
+   * @param {string} server_id - The ID of the server
+   * @returns {string} - The SQL query to update the total and online user count of a server
+   */
+  updateServerCount: "UPDATE servers SET total_users = ?, online_users = ? WHERE server_id = ?",
+
+  /**
+   * Inserts a new user into the users table
+   * @param {string} server_id - The ID of the server
+   * @param {string} user_id - The ID of the user
+   * @param {string} status - The status of the user
+   * @returns {string} - The SQL query to insert a new user into the users table
+   */
+  createUser: "INSERT INTO users (server_id, user_id, status) VALUES (?, ?, ?)",
+
+  /**
+   * Lists all of the server Ids
+   * @returns {Array} - server ids saved in db from discord
+   */
+  listServerIds: "SELECT server_id FROM servers",
+
+  /**
+   * Lists all of the user Ids and status of users in a server
+   * @param server_id
+   * @returns {Array} - user ids and status saved in db from discord
+   */
+  listServerUsers: "SELECT user_id, status FROM users WHERE server_id = ?"
 }
 
-function userPresenceChanged(status, guildId, userId){
-  //online status did NOT change, but presence did
-  con.query("UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?", [status, guildId, userId], function (err, result, fields) {
-      if (err) throw err;
-  });
-  con.query("INSERT INTO events (timestamp, event_type, event_data, guild_id, user_id) VALUES (?, ?, ?, ? ,?)", [Date.now(), eventTypes[0], JSON.stringify({status: status}), guildId, userId], function (err, result, fields) {
-  });
+class Database {
+    constructor(){
+    }
+    query(query, args){
+      return new Promise((resolve, reject) => {
+        con.query(query, args, function(err, result, fields) {
+            if (err){
+              reject(err)
+            }else{
+              resolve(result)
+            }
+        })
+      })
+    }
+
 }
 
-function getUser(userId, guildId, cb){
-    con.query("SELECT * FROM users WHERE server_id = ? AND user_id = ?", [guildId, userId], function (err, result, fields) {
-        if (err) throw err;
-        cb(fields)
-    });
-}
-
-function createServer(guildId, totalUsers, onlineUsers){
-   con.query("INSERT INTO servers (server_id, total_users, online_users) VALUES (?, ?, ?)", [guildId, totalUsers, onlineUsers], function (err, result, fields) {
-   });
-}
-
-function updateServerCount(guildId, totalUsers, onlineUsers){
-   con.query("UPDATE servers SET total_users = ?, online_users = ? WHERE server_id = ?", [totalUsers, onlineUsers, guildId], function (err, result, fields) {
-   });
-}
-function createUser(guildId, userId, status){
-   con.query("INSERT INTO users (server_id, user_id, status) VALUES (?, ?, ?)", [guildId, userId, status], function (err, result, fields) {
-   });
-}
-
-function updateUserStatus(guildId, userId, status){
-   con.query("UPDATE users SET status = ? WHERE server_id = ? AND user_id = ?", [status, guildId, userId], function (err, result, fields) {
-   });
-}
-
-function getAllServerIds(cb){
-    con.query("SELECT server_id FROM servers", function (err, result, fields) {
-        if (err) throw err;
-        cb(result)
-    });
-}
-module.exports = {userOnlineStatusChanged, createServer, createUser, getUser, updateServerCount, updateUserStatus, userPresenceChanged, getAllServerIds};
+module.exports = {Database, queryStatements, eventTypes, onlineStatus};
