@@ -107,7 +107,20 @@ client.on(Events.PresenceUpdate, (oldPresence, newPresence) => {
          .catch(console.warn)
       } 
    }
-});
+})
+
+client.on(Events.GuildMemberAdd, (member) => {
+   console.log(`+ ${member.displayName} joined '${member.guild.name}' (${member.guild.id})`)
+   db.query(queryStatements.createUser, [member.guild.id, member.id, member.presence ? member.presence.status : "offline"])
+   .then(db.query(queryStatements.userOnlineStatusServerUpdate, [member.presence ? true : false, member.guild.id]))
+   .then(db.query(queryStatements.getServerCount, [member.guild.id])
+   .then(count => {
+      db.query(queryStatements.updateServerCount, [count[0].total_users + 1, count[0].online_users + ((member.presence && member.presence.status != "offline") ? 1 : 0), member.guild.id])
+   }))
+   .then(db.query(queryStatements.newEvent, [Date.now(), "user_join", JSON.stringify({guild_id: member.guild.id, member_id: member.id, member_status: member.presence ? member.presence.status : "offline"}), member.guild.id, member.id]))
+   .catch(console.warn)
+})
+
 //todo: handle user join/leave
 //todo: handle bot leave
 //todo: events table

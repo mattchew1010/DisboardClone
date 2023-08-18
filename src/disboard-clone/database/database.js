@@ -88,7 +88,22 @@ const queryStatements = {
    * @param server_id
    * @returns {Array} - user ids and status saved in db from discord
    */
-  listServerUsers: "SELECT user_id, status FROM users WHERE server_id = ?"
+  listServerUsers: "SELECT user_id, status FROM users WHERE server_id = ?",
+
+  /**
+   * Sets server count
+   * @param {number} total_users
+   * @param {number} online_users
+   * @param {string} server_id
+    */
+  setServerCount: "UPDATE servers SET total_users = ?, online_users = ? WHERE server_id = ?",
+
+  /**
+   * gets server count
+   * @param {string} server_id
+   * @returns {Array} - total_users and online_users 
+    */
+  getServerCount: "SELECT total_users, online_users from servers WHERE server_id = ?",
 }
 
 class Database {
