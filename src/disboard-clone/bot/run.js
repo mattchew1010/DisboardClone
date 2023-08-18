@@ -32,6 +32,7 @@ client.once(Events.ClientReady, () => {
                         if (!users.find(({user_id}) => user_id === member.id)){ //can not find an entry for a guild member in the db
                            console.log(`+ adding user ${member.displayName} (${member.id}) in guild ${guild.name} `)
                            db.query(queryStatements.createUser, [guild.id, member.id, (member.presence != null) ? member.presence.status : "offline"]) //if no presence then consider them offline
+                           .then(db.query(queryStatements.newEvent, [Date.now(), "user_join", JSON.stringify({guild_id: guild.id, member_id: member.id, member_status: (member.presence != null) ? member.presence.status : "offline"}), guild.id, member.id]))
                            .catch(console.warn)
                         }
                         db.query(queryStatements.userOnlineStatusUpdate, [(member.presence != null) ? member.presence.status : "offline", guild.id, member.id])
@@ -58,6 +59,7 @@ client.on(Events.GuildCreate, (guild) => {
    console.log(`Joined ${guild.name}`)
    //guild.members.cache.each(member => console.log(member.presence))
    db.query(queryStatements.createServer, [guild.id, guild.memberCount, guild.members.cache.filter(member => (member.presence != null && member.presence.status != "offline")).size])
+   .then(db.query(queryStatements.newEvent, [Date.now(), "guild_join", JSON.stringify({guild_id: guild.id, guild_name: guild.name, member_count: guild.memberCount}), guild.id, null]))
    .catch(console.warn)
    guild.members.fetch({withPresences: true})
       .then(members => {
@@ -83,7 +85,7 @@ client.on(Events.PresenceUpdate, (oldPresence, newPresence) => {
          }else{
             let user = userArray[0]
             if ((onlineStatus.includes(user.status) && newPresence.status == "offline") || (user.status == "offline" && onlineStatus.includes(newPresence.status))){
-               db.query(queryStatements.userOnlineStatusServerUpdate, [newPresence.status == "offline" ? false : true])
+               db.query(queryStatements.userOnlineStatusServerUpdate, [newPresence.status == "offline" ? false : true, newPresence.guild.id])
                .then(db.query(queryStatements.userOnlineStatusUpdate, [newPresence.status, newPresence.guild.id, newPresence.user.id]))
                .then(db.query(queryStatements.newEvent, [Date.now(), "status_update", JSON.stringify({status: newPresence.status}), newPresence.guild.id, newPresence.user.id]))
                .catch(console.warn)
@@ -95,7 +97,7 @@ client.on(Events.PresenceUpdate, (oldPresence, newPresence) => {
    if (oldPresence.status != newPresence.status) {
       if ((onlineStatus.includes(oldPresence.status) && newPresence.status == "offline") || (oldPresence.status == "offline" && onlineStatus.includes(newPresence.status))){
          //^^ if the user was online and is now offline, or was offline and is now online
-         db.query(queryStatements.userOnlineStatusServerUpdate, [newPresence.status == "offline" ? false : true])
+         db.query(queryStatements.userOnlineStatusServerUpdate, [newPresence.status == "offline" ? false : true, newPresence.guild.id])// no server id
                .then(db.query(queryStatements.userOnlineStatusUpdate, [newPresence.status, newPresence.guild.id, newPresence.user.id]))
                .then(db.query(queryStatements.newEvent, [Date.now(), "status_update", JSON.stringify({status: newPresence.status}), newPresence.guild.id, newPresence.user.id]))
                .catch(console.warn)
