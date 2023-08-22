@@ -9,6 +9,7 @@ build/
 
 # Ignore environment variables file
 .env
+.next
 
 # Ignore IDE and editor files
 .vscode/
