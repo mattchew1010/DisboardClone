@@ -1,7 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Events} = require('discord.js');
-const {Database, queryStatements, onlineStatus} = require('../database/database.js');
-const { data } = require('autoprefixer');
+const {Database, queryStatements, onlineStatus} = require('../util/database.js');
 const token = process.env.discord_bot_token //temp move to .env
 const db = new Database
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildPresences, GatewayIntentBits.GuildMembers]});
