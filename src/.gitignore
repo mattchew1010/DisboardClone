@@ -1,21 +1,6 @@
-# Ignore node_modules directory
-node_modules/
+node_modules
 
-# Ignore build output
-build/
-
-# Ignore log files
-*.log
-
-# Ignore environment variables file
+/.cache
+/build
+/public/build
 .env
-
-# Ignore IDE and editor files
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-
-# Ignore OS generated files
-.DS_Store
-Thumbs.db

@@ -1,7 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Events} = require('discord.js');
-const {Database, queryStatements, onlineStatus} = require('../database/database.js');
-const { data } = require('autoprefixer');
+const {Database, queryStatements, onlineStatus} = require('../util/database.js');
 const token = process.env.discord_bot_token //temp move to .env
 const db = new Database
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildPresences, GatewayIntentBits.GuildMembers]});
@@ -121,7 +120,8 @@ client.on(Events.GuildMemberAdd, (member) => {
    .catch(console.warn)
 })
 
-//todo: handle user join/leave
+//todo: handle user leave
+//todo: handle user rejoin
 //todo: handle bot leave
 //todo: events table
 
