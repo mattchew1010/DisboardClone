@@ -121,7 +121,8 @@ client.on(Events.GuildMemberAdd, (member) => {
    .catch(console.warn)
 })
 
-//todo: handle user join/leave
+//todo: handle user leave
+//todo: handle user rejoin
 //todo: handle bot leave
 //todo: events table
 
