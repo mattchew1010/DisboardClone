@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model events {
+  id         Int     @id @default(autoincrement()) @db.UnsignedInt
+  timestamp  BigInt  @db.UnsignedBigInt
+  event_type String  @db.VarChar(255)
+  event_data String  @db.VarChar(5000)
+  guild_id   String? @db.VarChar(20)
+  user_id    String? @db.VarChar(20)
+}
+
+model servers {
+  id           Int     @id @default(autoincrement()) @db.UnsignedInt
+  server_id    String  @unique(map: "server_id") @db.VarChar(20)
+  name         String? @db.VarChar(255)
+  description  String? @db.VarChar(2048)
+  total_users  Int     @default(0) @db.UnsignedInt
+  online_users Int     @default(0) @db.UnsignedInt
+  users        users[]
+}
+
+model users {
+  id        Int          @id @default(autoincrement()) @db.UnsignedInt
+  server_id String       @db.VarChar(20)
+  user_id   String       @db.VarChar(20)
+  status    users_status
+  servers   servers      @relation(fields: [server_id], references: [server_id], onDelete: NoAction, onUpdate: NoAction, map: "users_ibfk_1")
+
+  @@index([server_id], map: "server_id")
+}
+
+enum users_status {
+  online
+  idle
+  offline
+  dnd
+}
